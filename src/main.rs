@@ -3,7 +3,7 @@ extern crate wasmi;
 
 use std::collections::HashMap;
 
-use wasmi::{ImportResolver, ImportsBuilder, ModuleInstance, NopExternals, RuntimeValue};
+use wasmi::{ImportResolver, ModuleInstance, NopExternals, RuntimeValue};
 
 struct Imports {}
 
@@ -17,62 +17,81 @@ impl ImportResolver for Imports {
         dbg!(module_name, field_name, signature);
 
         match module_name {
-            "env" => {
-                match field_name {
-                    "_pragma" => {
-                        use wasmi::ValueType::*;
+            "env" => match field_name {
+                "_pragma" => {
+                    use wasmi::ValueType::*;
 
-                       return Ok(wasmi::FuncInstance::alloc_host(wasmi::Signature::new(&[I32, I32][..], None), 1))
-                    }
-                    "_create" => {
-                        use wasmi::ValueType::*;
-
-                       return Ok(wasmi::FuncInstance::alloc_host(wasmi::Signature::new(&[I32, I32, I32][..], Some(I32)), 2))
-                    }
-                    "_bind" => {
-                        use wasmi::ValueType::*;
-
-                       return Ok(wasmi::FuncInstance::alloc_host(wasmi::Signature::new(&[I32, I32, I32, I32][..], Some(I32)), 3))
-                    }
-                    "_spawn" => {
-                        use wasmi::ValueType::*;
-
-                       return Ok(wasmi::FuncInstance::alloc_host(wasmi::Signature::new(&[I32][..], Some(I32)), 4))
-                    }
-                    "_invoke" => {
-                        use wasmi::ValueType::*;
-
-                       return Ok(wasmi::FuncInstance::alloc_host(wasmi::Signature::new(&[I32, I32, I32, I32, I32][..], Some(I32)), 5))
-                    }
-                    _ => {}
+                    return Ok(wasmi::FuncInstance::alloc_host(
+                        wasmi::Signature::new(&[I32, I32][..], None),
+                        1,
+                    ));
                 }
-            }
+                "_create" => {
+                    use wasmi::ValueType::*;
+
+                    return Ok(wasmi::FuncInstance::alloc_host(
+                        wasmi::Signature::new(&[I32, I32, I32][..], Some(I32)),
+                        2,
+                    ));
+                }
+                "_bind" => {
+                    use wasmi::ValueType::*;
+
+                    return Ok(wasmi::FuncInstance::alloc_host(
+                        wasmi::Signature::new(&[I32, I32, I32, I32][..], Some(I32)),
+                        3,
+                    ));
+                }
+                "_spawn" => {
+                    use wasmi::ValueType::*;
+
+                    return Ok(wasmi::FuncInstance::alloc_host(
+                        wasmi::Signature::new(&[I32][..], Some(I32)),
+                        4,
+                    ));
+                }
+                "_invoke" => {
+                    use wasmi::ValueType::*;
+
+                    return Ok(wasmi::FuncInstance::alloc_host(
+                        wasmi::Signature::new(&[I32, I32, I32, I32, I32][..], Some(I32)),
+                        5,
+                    ));
+                }
+                _ => {}
+            },
             _ => {}
         }
 
-        Err(wasmi::Error::Instantiation(format!("could not find {} in module {}", field_name, module_name)))
+        Err(wasmi::Error::Instantiation(format!(
+            "could not find {} in module {}",
+            field_name, module_name
+        )))
     }
+
     fn resolve_global(
         &self,
-        module_name: &str,
-        field_name: &str,
-        descriptor: &wasmi::GlobalDescriptor,
+        _module_name: &str,
+        _field_name: &str,
+        _descriptor: &wasmi::GlobalDescriptor,
     ) -> std::result::Result<wasmi::GlobalRef, wasmi::Error> {
         todo!()
     }
+
     fn resolve_memory(
         &self,
-        module_name: &str,
-        field_name: &str,
-        descriptor: &wasmi::MemoryDescriptor,
+        _module_name: &str,
+        _field_name: &str,
+        _descriptor: &wasmi::MemoryDescriptor,
     ) -> std::result::Result<wasmi::MemoryRef, wasmi::Error> {
         todo!()
     }
+
     fn resolve_table(
         &self,
-        module_name: &str,
-        field_name: &str,
-        descriptor: &wasmi::TableDescriptor,
+        _module_name: &str,
+        _field_name: &str,
+        _descriptor: &wasmi::TableDescriptor,
     ) -> std::result::Result<wasmi::TableRef, wasmi::Error> {
         todo!()
     }
@@ -92,7 +111,12 @@ impl HostExternals {
             new_idx: 0,
             processes: Default::default(),
             spawned_processes: Default::default(),
-            mem: module.export_by_name("memory").unwrap().as_memory().unwrap().clone(),
+            mem: module
+                .export_by_name("memory")
+                .unwrap()
+                .as_memory()
+                .unwrap()
+                .clone(),
             module,
         }
     }
@@ -114,11 +138,10 @@ struct BindingSet {
 
 impl wasmi::ModuleImportResolver for BindingSet {
     fn resolve_func(
-            &self,
-            field_name: &str,
-            _signature: &wasmi::Signature
-            ) -> Result<wasmi::FuncRef, wasmi::Error> {
-
+        &self,
+        field_name: &str,
+        _signature: &wasmi::Signature,
+    ) -> Result<wasmi::FuncRef, wasmi::Error> {
         Ok(self.bindings[field_name].clone())
     }
 }
@@ -132,14 +155,15 @@ impl wasmi::Externals for HostExternals {
         dbg!(&index, &args);
 
         match index {
-            1 => {
-                Ok(None)
-            },
+            1 => Ok(None),
             2 => {
                 self.new_idx += 16;
                 let idx = self.new_idx | 0b0001;
 
-                let bytecode = self.mem.get(args.nth(0), args.nth::<u32>(1) as usize).unwrap();
+                let bytecode = self
+                    .mem
+                    .get(args.nth(0), args.nth::<u32>(1) as usize)
+                    .unwrap();
 
                 let module = match wasmi::Module::from_buffer(&bytecode) {
                     Ok(m) => m,
@@ -148,13 +172,16 @@ impl wasmi::Externals for HostExternals {
                     }
                 };
 
-                let proc = Process { module, bindings: Default::default() };
+                let proc = Process {
+                    module,
+                    bindings: Default::default(),
+                };
 
                 self.processes.insert(idx, proc);
 
                 Ok(Some(idx.into()))
-            },
-            3 => { 
+            }
+            3 => {
                 let handle: u32 = args.nth(0);
                 let fn_name_ptr: u32 = args.nth(1);
                 let fn_name_length: u32 = args.nth(2);
@@ -165,41 +192,46 @@ impl wasmi::Externals for HostExternals {
 
                 let fn_name_str = String::from_utf8(fn_name).unwrap();
 
-                let exp = self.module.export_by_name("__indirect_function_table").unwrap();
+                let exp = self
+                    .module
+                    .export_by_name("__indirect_function_table")
+                    .unwrap();
+
                 let table = exp.as_table().unwrap();
 
-                assert!(fnptr < 1024, "you probably passed a *pointer* to memory not a table index. don't do that.");
+                assert!(
+                    fnptr < 1024,
+                    "you probably passed a *pointer* to memory not a table index. don't do that."
+                );
 
                 let fnref = table.get(fnptr).unwrap().unwrap();
 
                 proc.bindings.bindings.insert(fn_name_str, fnref);
 
                 Ok(Some(0.into()))
-            },
-            4 => { 
+            }
+            4 => {
                 let handle: u32 = args.nth(0);
 
                 dbg!(handle);
-
 
                 self.new_idx += 16;
                 let idx = self.new_idx | 0b0010;
 
                 let proc = self.processes.remove(&handle).unwrap();
 
-                let imports = wasmi::ImportsBuilder::default()
-                    .with_resolver("env", &proc.bindings);
+                let imports = wasmi::ImportsBuilder::default().with_resolver("env", &proc.bindings);
 
-                let mi = ModuleInstance::new(&proc.module, &imports).unwrap().assert_no_start();
+                let mi = ModuleInstance::new(&proc.module, &imports)
+                    .unwrap()
+                    .assert_no_start();
 
-                let sp = SpawnedProcess {
-                    module: mi,
-                };
+                let sp = SpawnedProcess { module: mi };
 
                 self.spawned_processes.insert(idx, sp);
 
                 Ok(Some(idx.into()))
-            },
+            }
             5 => {
                 let handle: u32 = args.nth(0);
                 let fn_name_ptr: u32 = args.nth(1);
@@ -219,9 +251,8 @@ impl wasmi::Externals for HostExternals {
 
                 let mut runtime_values = Vec::<wasmi::RuntimeValue>::new();
                 for param in func.signature().params() {
-                    use wasmi::ValueType;
                     use wasmi::nan_preserving_float::{F32, F64};
-
+                    use wasmi::ValueType;
 
                     let rtv = match param {
                         ValueType::I32 => self.mem.get_value::<i32>(idx).unwrap().into(),
@@ -236,21 +267,25 @@ impl wasmi::Externals for HostExternals {
 
                     runtime_values.push(rtv);
                 }
-                
+
                 dbg!(&runtime_values);
 
-                let result = sp.module.invoke_export(&fn_name_str, &runtime_values, &mut NopExternals).unwrap();
+                let result = sp
+                    .module
+                    .invoke_export(&fn_name_str, &runtime_values, &mut NopExternals)
+                    .unwrap();
 
                 match result {
-                    Some(r) => { 
+                    Some(r) => {
                         use wasmi::RuntimeValue::*;
                         match r {
                             I32(v) => self.mem.set_value(result_ptr, v),
                             I64(v) => self.mem.set_value(result_ptr, v),
                             F32(v) => self.mem.set_value(result_ptr, v),
                             F64(v) => self.mem.set_value(result_ptr, v),
-                        }.unwrap();
-                    },
+                        }
+                        .unwrap();
+                    }
                     None => {}
                 };
 
@@ -261,7 +296,6 @@ impl wasmi::Externals for HostExternals {
     }
 }
 
-
 fn main() {
     let wasm_binary = include_bytes!(
         "../wasm/hello_world/target/wasm32-unknown-unknown/release/hello_world.wasm"
@@ -270,13 +304,10 @@ fn main() {
     // Load wasm binary and prepare it for instantiation.
     let module = wasmi::Module::from_buffer(wasm_binary.as_ref()).expect("failed to load wasm");
 
-    let instance = ModuleInstance::new(&module, &Imports{})
+    let instance = ModuleInstance::new(&module, &Imports {})
         .expect("failed to instantiate wasm module")
         .assert_no_start();
 
-    // Finally, invoke the exported function "test" with no parameters
-    // and empty external function executor.
-    //
     let mut externals = HostExternals::new(instance.clone());
 
     assert_eq!(
