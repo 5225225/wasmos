@@ -297,8 +297,9 @@ impl wasmi::Externals for HostExternals {
 }
 
 fn main() {
+    // if you're getting a build error here, go to 'wasm' and do `cargo build --release`
     let wasm_binary = include_bytes!(
-        "../wasm/hello_world/target/wasm32-unknown-unknown/release/hello_world.wasm"
+        "../wasm/target/wasm32-unknown-unknown/release/hello_world.wasm"
     );
 
     // Load wasm binary and prepare it for instantiation.
