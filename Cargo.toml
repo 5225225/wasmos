@@ -1,0 +1,11 @@
+[package]
+name = "wasmos"
+version = "0.1.0"
+authors = ["5225225 <5225225@mailbox.org>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wasmi = "0.6.2"
+wabt = "0.9.2"
