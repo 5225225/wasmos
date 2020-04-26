@@ -1,14 +1,9 @@
 [package]
-name = "hello_world"
+name = "wasmcorelib"
 version = "0.1.0"
 authors = ["5225225 <5225225@mailbox.org>"]
 edition = "2018"
 
-[lib]
-crate-type = ["cdylib"]
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-wee_alloc = "0.4.5"
-wasmcorelib = { path = "../wasmcorelib" }

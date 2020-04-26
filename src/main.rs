@@ -54,7 +54,7 @@ impl ImportResolver for Imports {
                     use wasmi::ValueType::*;
 
                     return Ok(wasmi::FuncInstance::alloc_host(
-                        wasmi::Signature::new(&[I32, I32, I32, I32, I32][..], Some(I32)),
+                        wasmi::Signature::new(&[I32, I32, I32, I32, I32, I32, I32][..], Some(I32)),
                         5,
                     ));
                 }
@@ -237,7 +237,9 @@ impl wasmi::Externals for HostExternals {
                 let fn_name_ptr: u32 = args.nth(1);
                 let fn_name_length: u32 = args.nth(2);
                 let arg_ptr: u32 = args.nth(3);
-                let result_ptr: u32 = args.nth(4);
+                let arg_ty_ptr: u32 = args.nth(4);
+                let arg_len: u32 = args.nth(5);
+                let result_ptr: u32 = args.nth(6);
 
                 let fn_name_bytes = self.mem.get(fn_name_ptr, fn_name_length as usize).unwrap();
                 let fn_name_str = String::from_utf8(fn_name_bytes).unwrap();
@@ -249,16 +251,27 @@ impl wasmi::Externals for HostExternals {
 
                 let mut idx = arg_ptr;
 
+                let arg_types = self.mem.get(arg_ty_ptr, arg_len as usize).unwrap();
+
                 let mut runtime_values = Vec::<wasmi::RuntimeValue>::new();
-                for param in func.signature().params() {
+                for (param, ty) in func.signature().params().iter().zip(arg_types) {
                     use wasmi::nan_preserving_float::{F32, F64};
                     use wasmi::ValueType;
 
                     let rtv = match param {
-                        ValueType::I32 => self.mem.get_value::<i32>(idx).unwrap().into(),
-                        ValueType::I64 => self.mem.get_value::<i64>(idx).unwrap().into(),
-                        ValueType::F32 => self.mem.get_value::<F32>(idx).unwrap().into(),
-                        ValueType::F64 => self.mem.get_value::<F64>(idx).unwrap().into(),
+                        ValueType::I32 if ty == b'i' => {
+                            self.mem.get_value::<i32>(idx).unwrap().into()
+                        }
+                        ValueType::I64 if ty == b'I' => {
+                            self.mem.get_value::<i64>(idx).unwrap().into()
+                        }
+                        ValueType::F32 if ty == b'f' => {
+                            self.mem.get_value::<F32>(idx).unwrap().into()
+                        }
+                        ValueType::F64 if ty == b'F' => {
+                            self.mem.get_value::<F64>(idx).unwrap().into()
+                        }
+                        _ => panic!("type mismatch"),
                     };
 
                     // yes this means we have padding bytes for 32 bit types
@@ -298,9 +311,8 @@ impl wasmi::Externals for HostExternals {
 
 fn main() {
     // if you're getting a build error here, go to 'wasm' and do `cargo build --release`
-    let wasm_binary = include_bytes!(
-        "../wasm/target/wasm32-unknown-unknown/release/hello_world.wasm"
-    );
+    let wasm_binary =
+        include_bytes!("../wasm/target/wasm32-unknown-unknown/release/hello_world.wasm");
 
     // Load wasm binary and prepare it for instantiation.
     let module = wasmi::Module::from_buffer(wasm_binary.as_ref()).expect("failed to load wasm");
